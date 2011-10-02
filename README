@@ -1,0 +1,16 @@
+Other packages I've seen have too many constants and assumptions built-in 
+(such as which facebook permissions your app needs). As with most of my 
+github shares, I'm going for a less gun-to-your-head feature approach with
+this app.
+
+-I needed more granular permission checks/requests--instead of a bulk of
+them up front, certain features require certain permissions.
+
+-I needed automatic redirect support for joining a user with the page they
+abandoned.
+
+-I wanted some additional tools for connecting local users to a Fan page so
+I could give my fans goodies.
+
+-I wanted a data API that provided a loose way to make repetitive tasks
+tidy. For hard things, bust out URLLIB yourself and hit Graph directly.
