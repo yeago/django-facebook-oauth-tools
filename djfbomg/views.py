@@ -12,17 +12,14 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.contrib.auth import authenticate, login
+from django.views.generic.base import RedirectView
 
 from djfbomg.utils import graph_api, is_facebook_fan
 
-from tapped.base.forms import ClaimUsernameForm
-
 log = logging.getLogger(__name__)
 
-BASE_URL = 'https://graph.facebook.com/'
-
 def connect(request):
-    request.COOKIES['FACEBOOK_ABANDON_PATH'] = request.GET.get('return_url')
+    request.session['FACEBOOK_ABANDON_PATH'] = request.GET.get('return_url')
     scope = 'user_likes,email'
     if request.GET.get('extra_scope'):
         scope = '%s,%s' % (scope,request.GET.get('extra_scope'))
@@ -41,9 +38,13 @@ def connect(request):
 
 GRAPH_URL = "https://graph.facebook.com/oauth/access_token?"
 
-def auth_callback(request):
-    return_url = urllib.unquote_plus(request.GET.get("return_url") or "/")
-    if request.GET.get("code"):
+class auth_callback(RedirectView): # This is where FB redirects you after auth.
+    permanent = False
+    def get(self, request, *args, **kwargs):
+        self.return_url = urllib.unquote_plus(request.session.get("FACEBOOK_ABANDON_PATH") or "/")
+        if not request.GET.get("code"): # Why are they here without a code var?
+            return redirect(self.return_url)
+
         params = {
             'client_id': settings.FACEBOOK_APP_ID,
             'redirect_uri': "http://%s%s" % (Site.objects.get_current(),reverse("facebook_auth_callback")),
@@ -55,18 +56,31 @@ def auth_callback(request):
         req = urllib.urlopen("%s%s" % (GRAPH_URL, params))
         body = req.read()
 
-        if not "error" in body:
-            token = body.split("&")[0].replace("access_token=","")
+        if "error" in body:
+            log.debug("FB Authentication error: %s" % body)
+            messages.error(request,"Some problem authenticating you. Maybe try again?")
+            return redirect(return_url)
 
-            req = urllib.urlopen("https://graph.facebook.com/me/?format=json&access_token=%s" % (token))
-            data = json.loads(req.read())
-            facebook_id = data['id']
+        self.token = body.split("&")[0].replace("access_token=","")
+
+        req = urllib.urlopen("https://graph.facebook.com/me/?format=json&access_token=%s" % (self.token))
+        data = json.loads(req.read())
+        self.facebook_id = data['id']
+        self.connect_success(request, *args, **kwargs)
+        return redirect(self.return_url)
+
+        def connect_success(self, request, *args, **kwargs):
+            raise Exception("Override this")
+
+            """
+
+            Here's some example stuff you can do here:
+
             success_msg = "Facebook Connect successful"
-
             if request.user.is_authenticated():
                 profile = request.user.get_profile()
-                profile.facebook_token = token 
-                profile.facebook_id = facebook_id
+                profile.facebook_token = self.token 
+                profile.facebook_id = self.facebook_id
                 profile.save()
 
                 if not profile.facebook_fan:
@@ -95,38 +109,13 @@ def auth_callback(request):
                             messages.warning(request,"We weren't able to get your email address "\
                                 "from facebook so you won't receive activity notices")
 
-                    friend_ids = [f['id'] for f in graph_api(request.user.userprofile.facebook_token,'friends')['data']]
-                    profiles = UserProfile.objects.filter(facebook_id__in=friend_ids).exclude(pk__in=\
-                        list(user.userprofile.friends.values_list('pk',flat=True).distinct()))
-
-                    if profiles.count():
-                        messages.info(request,"You have facebook friends on TappedOut. <a href='%s'>Follow them now</a>" % \
-                            reverse("facebook_sync_friends"))
-
                 except UserProfile.DoesNotExist:
                     request.session['facebook_id'] = facebook_id
                     request.session['facebook_token'] = token
                     return redirect("%s?return_url=%s" % (reverse("facebook_claim_username"),return_url))
 
             messages.success(request,success_msg)
-
-        else:
-            log.debug("FB Authentication error: %s" % body)
-            messages.error(request,"Some problem authenticating you. Maybe try again?")
-
-    return redirect(return_url)
-
-def sync_friends(request):
-    friend_ids = [f['id'] for f in graph_api(request.user.userprofile.facebook_token,'friends')['data']]
-    friends = User.objects.filter(userprofile__facebook_id__in=friend_ids).exclude(userfriends=request.user.userprofile)
-    if friends:
-        request.user.userprofile.friends.add(*[p.pk for p in friends])
-        messages.success(request,"You are now following %s" % ",".join(\
-            ["<a href='%s'>%s</a>" % (reverse("profile",args=[p.username]),p.username) for p in friends]))
-
-    else:
-        messages.warning(request,"Couldn't find any new friends from facebook")
-    return redirect(request.GET.get("return_url") or "/")
+            """
 
 def claim_username(request):
     if not request.session.get("facebook_id") or not request.session.get("facebook_token"):
