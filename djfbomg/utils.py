@@ -49,6 +49,5 @@ def graph_api(token,node,who='me',as_json=True,post_data=None,extra_params=None,
     if not fail_silently and isinstance(response,dict) and 'error' in response and 'type' in response['error']:
         raise OauthException(url,response['error']['type'])
 
-    print "XXX %s" % response
-
+    log.info(response)
     return response
