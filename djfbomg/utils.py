@@ -16,7 +16,8 @@ def is_facebook_fan(user):
         try:
             if i['id'] == settings.FACEBOOK_PAGE_ID:
                 return True
-        except Exception(i)
+        except Exception(i):
+            raise
 
     return False
 
