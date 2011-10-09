@@ -12,12 +12,11 @@ class OauthException(Exception):
 def is_facebook_fan(user):
     profile = user.get_profile()
     for i in graph_api(profile.facebook_token,"likes")['data']:
-        log.info(i)
         try:
             if i['id'] == settings.FACEBOOK_PAGE_ID:
                 return True
-        except Exception(i):
-            raise
+        except:
+            raise Exception("%s - %s" % (user,i)):
 
     return False
 
