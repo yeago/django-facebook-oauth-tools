@@ -14,15 +14,29 @@ from django.contrib.sites.models import Site
 from django.contrib.auth import authenticate, login
 from django.views.generic.base import RedirectView
 
-from djfbomg.utils import graph_api, is_facebook_fan
-
 log = logging.getLogger(__name__)
 
+"""
+You should subclass auth_callback and do something fun with your
+users once connected. Check out the examples directory for inspiration
+"""
+
 def connect(request):
-    request.session['FACEBOOK_ABANDON_PATH'] = request.GET.get('return_url')
-    scope = 'user_likes,email'
+    URL_GROUPS = [('return_url','FACEBOOK_ABANDON_URL'),('success_url','FACEBOOK_SUCCESS_URL'),('fail_url','FACEBOOK_FAIL_URL')]
+
+    for group in URL_GROUPS:
+        if request.session.get(group[1]):
+            del request.session[group[1]]
+
+        if request.GET.get(group[0]):
+            request.session[group[1]] = request.GET.get(group[0])
+    
+    scope = getattr(settings,'FACEBOOK_DEFAULT_SCOPE',False) or None
     if request.GET.get('extra_scope'):
-        scope = '%s,%s' % (scope,request.GET.get('extra_scope'))
+        if scope:
+            scope = '%s,%s' % (scope,request.GET['extra_scope'])
+        else:
+            scope = request.GET['extra_scope']
 
     redirect_uri = "http://%s%s" % (Site.objects.get_current().domain,\
         urllib.quote_plus(reverse("facebook_auth_callback")))
@@ -41,7 +55,22 @@ GRAPH_URL = "https://graph.facebook.com/oauth/access_token?"
 class auth_callback(RedirectView): # This is where FB redirects you after auth.
     permanent = False
     def get(self, request, *args, **kwargs):
-        self.return_url = urllib.unquote_plus(request.session.get("FACEBOOK_ABANDON_PATH") or "/")
+        self.return_url = "/"
+        self.abandon_url = None
+        self.success_url = None
+        self.fail_url = None
+    
+        if request.session.get("FACEBOOK_ABANDON_URL"):
+            self.abandon_url = urllib.unquote_plus(request.session.get("FACEBOOK_ABANDON_URL"))
+
+        if request.session.get("FACEBOOK_SUCCESS_URL"):
+            self.success_url = urllib.unquote_plus(request.session.get("FACEBOOK_SUCCESS_URL"))
+
+        if request.session.get("FACEBOOK_FAIL_URL"):
+            self.fail_url = urllib.unquote_plus(request.session.get("FACEBOOK_FAIL_URL"))
+
+        self.return_url = self.success_url or self.abandon_url or self.return_url
+
         if not request.GET.get("code"): # Why are they here without a code var?
             return redirect(self.return_url)
 
@@ -59,7 +88,8 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
         if "error" in body:
             log.debug("FB Authentication error: %s" % body)
             messages.error(request,"Some problem authenticating you. Maybe try again?")
-            return redirect(return_url)
+            self.return_url = self.fail_url or self.return_url
+            return redirect(self.return_url)
 
         self.token = body.split("&")[0].replace("access_token=","")
 
@@ -67,55 +97,30 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
         data = json.loads(req.read())
         self.facebook_id = data['id']
         self.connect_success(request, *args, **kwargs)
-        return redirect(self.return_url)
+        return redirect(self.success_url or self.return_url)
 
         def connect_success(self, request, *args, **kwargs):
             raise Exception("Override this")
 
-            """
+def solicit(request,permslug,fail=False):
+    """
+    The convention in place is this:
 
-            Here's some example stuff you can do here:
+    We want to ask users whether they want to give us some permission
+    to do something. We don't care what the something is called, but 
+    we call it a 'permslug'. the NullBool field 'facebook_solicit_SOMEPERM'
+    must be on their profile. This tracks whether the user has A) Accepted
+    B) Rejected or C) Not been solicited. 
+    """
+    profile_field = "facebook_solicit_%s" % permslug
+    profile = request.user.get_profile()
 
-            success_msg = "Facebook Connect successful"
-            if request.user.is_authenticated():
-                profile = request.user.get_profile()
-                profile.facebook_token = self.token 
-                profile.facebook_id = self.facebook_id
-                profile.save()
+    if not hasattr(profile,profile_field):
+        raise Http404 # Profile needs to have the field for this to be useful
 
-                if not profile.facebook_fan:
-                    success_msg = "%s &mdash; If you were our <a target=\"_new\" href=\"%s\">fan on Facebook</a>"\
-                        " you'd be getting a free feature token!" % (success_msg,settings.FACEBOOK_PAGE_URL)
-                        
-                    if is_facebook_fan(request.user):
-                        profile.feature_tokens += 1
-                        profile.facebook_fan = True
-                        profile.save()
-                        success_msg = "Facebook connect successful &mdash; Feature token added for being our fan!" 
-
-            else:
-                try:
-                    profile = UserProfile.objects.get(facebook_id=facebook_id)
-                    user = authenticate(facebook_id=facebook_id)
-                    login(request,user)
-                    profile.facebook_token = token
-                    profile.save()
-
-                    if not user.email:
-                        if data.get("email"):
-                            user.email = data.get("email")
-                            user.save()
-                        else:
-                            messages.warning(request,"We weren't able to get your email address "\
-                                "from facebook so you won't receive activity notices")
-
-                except UserProfile.DoesNotExist:
-                    request.session['facebook_id'] = facebook_id
-                    request.session['facebook_token'] = token
-                    return redirect("%s?return_url=%s" % (reverse("facebook_claim_username"),return_url))
-
-            messages.success(request,success_msg)
-            """
+    setattr(profile,profile_field,fail == False)
+    profile.save()
+    return redirect(request.GET.get('return_url') or '/')
 
 def claim_username(request):
     if not request.session.get("facebook_id") or not request.session.get("facebook_token"):

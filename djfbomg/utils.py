@@ -11,7 +11,7 @@ class OauthException(Exception):
 
 def is_facebook_fan(user):
     profile = user.get_profile()
-    for i in graph_api(profile.facebook_token,"likes")['data']:
+    for i in graph_api(profile.facebook_token,"me","likes")['data']:
         try:
             if i['id'] == settings.FACEBOOK_PAGE_ID:
                 return True
@@ -20,7 +20,13 @@ def is_facebook_fan(user):
 
     return False
 
-def graph_api(token,node,who='me',as_json=True,post_data=None,extra_params=None,fail_silently=False):
+def graph_api(*args, **kwargs):
+    args = list(args)
+    token = args.pop(0)
+    as_json = kwargs.pop('as_json',True)
+    post_data = kwargs.pop('post_data',None)
+    fail_silently = kwargs.pop('fail_silently',False)
+
     BASE_URL = 'https://graph.facebook.com/'
 
     params = {
@@ -28,19 +34,20 @@ def graph_api(token,node,who='me',as_json=True,post_data=None,extra_params=None,
         'access_token': token,
     }
 
-    if extra_params:
-        params.update(extra_params)
+    params.update(kwargs)
 
-    url = '%s%s/%s' % (BASE_URL,who,node)
+    url = '%s%s' % (BASE_URL,"/".join(args))
 
     if post_data is not None:
         params.update(post_data)
         params = urllib.urlencode(params)
+        log.info(url)
         req = urllib.urlopen(url,params)
         
     else: 
         params = urllib.urlencode(params)
         url = '%s?%s' % (url,params)
+        log.debug(url)
         req = urllib.urlopen(url)
 
     if not as_json:
@@ -50,6 +57,9 @@ def graph_api(token,node,who='me',as_json=True,post_data=None,extra_params=None,
     response = json.loads(body)
 
     if not fail_silently and isinstance(response,dict) and 'error' in response and 'type' in response['error']:
+        print response
+        log.info(response)
+        #import pdb;pdb.set_trace()
         raise OauthException(url,response['error']['type'])
 
     log.info(response)

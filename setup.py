@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-facebook-oauth-tools',
-    version="0.3",
+    version="0.4",
     author='Steve Yeago',
     author_email='subsume@gmail.com',
     description='Django Facebook Oauth Blah Blah Blah',
