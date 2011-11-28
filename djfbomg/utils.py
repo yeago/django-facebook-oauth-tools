@@ -57,10 +57,9 @@ def graph_api(*args, **kwargs):
     response = json.loads(body)
 
     if not fail_silently and isinstance(response,dict) and 'error' in response and 'type' in response['error']:
-        print response
-        log.info(response)
+        log.debug(response)
         #import pdb;pdb.set_trace()
-        raise OauthException(url,response['error']['type'])
+        raise OauthException(url,response['error']['type'], response)
 
     log.info(response)
     return response
