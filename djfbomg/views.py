@@ -91,11 +91,12 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
             self.return_url = self.fail_url or self.return_url
             return redirect(self.return_url)
 
+        self.response = body
         self.token = body.split("&")[0].replace("access_token=","")
 
         req = urllib.urlopen("https://graph.facebook.com/me/?format=json&access_token=%s" % (self.token))
-        data = json.loads(req.read())
-        self.facebook_id = data['id']
+        self.data = json.loads(req.read())
+        self.facebook_id = self.data['id']
         self.connect_success(request, *args, **kwargs)
         return redirect(self.success_url or self.return_url)
 
