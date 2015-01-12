@@ -1,4 +1,7 @@
-from django.conf.urls.defaults import *
+try:
+    from django.conf.urls.defaults import * # Django 1.4
+except ImportError:
+    from django.conf.urls import * # Django >= 1.6
 
 from djfbomg.views import auth_callback
 
