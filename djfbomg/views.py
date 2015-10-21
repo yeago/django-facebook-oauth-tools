@@ -114,7 +114,7 @@ def solicit(request,permslug,fail=False):
     B) Rejected or C) Not been solicited. 
     """
     profile_field = "facebook_solicit_%s" % permslug
-    profile = request.user.get_profile()
+    profile = request.user.userprofile
 
     if not hasattr(profile,profile_field):
         raise Http404 # Profile needs to have the field for this to be useful
@@ -131,7 +131,7 @@ def claim_username(request):
 
     if request.POST and form.is_valid():
         user = User.objects.create(username=form.cleaned_data.get("username"),password="")
-        profile = user.get_profile()
+        profile = user.userprofile
         profile.facebook_id = form.facebook_id
         profile.save()
         user = authenticate(facebook_id=profile.facebook_id)

@@ -8,7 +8,7 @@ class auth_callback(base_auth_callback):
         success_msg = "Facebook Connect successful"
         profile = None
         if request.user.is_authenticated():
-            profile = request.user.get_profile()
+            profile = request.user.userprofile
             profile.facebook_token = self.token 
             profile.facebook_id = self.facebook_id
             profile.save()
