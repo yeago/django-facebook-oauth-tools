@@ -42,13 +42,13 @@ def graph_api(*args, **kwargs):
         params.update(post_data)
         params = urllib2.urlencode(params)
         log.info(url)
-        req = urllib2.urlopen(url,params)
+        req = urllib2.urlopen(url, params, timeout=5)
         
     else: 
         params = urllib2.urlencode(params)
         url = '%s?%s' % (url,params)
         log.debug(url)
-        req = urllib2.urlopen(url)
+        req = urllib2.urlopen(url, timeout=5)
 
     if not as_json:
         return req
