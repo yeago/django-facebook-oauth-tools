@@ -1,6 +1,7 @@
 import logging
 import json
-import urllib
+import urllib2
+from urllib import urlencode
 
 from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
@@ -81,8 +82,8 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
             'code': request.GET.get("code"),
         }
 
-        params = urllib.urlencode(params)
-        req = urllib.urlopen("%s%s" % (GRAPH_URL, params))
+        params = urlencode(params)
+        req = urllib2.urlopen("%s%s" % (GRAPH_URL, params), timeout=5)
         body = req.read()
 
         if "error" in body:
@@ -94,7 +95,7 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
         self.response = body
         self.token = body.split("&")[0].replace("access_token=","")
 
-        req = urllib.urlopen("https://graph.facebook.com/me/?format=json&access_token=%s" % (self.token))
+        req = urllib2.urlopen("https://graph.facebook.com/me/?format=json&access_token=%s" % (self.token), timeout=5)
         self.data = json.loads(req.read())
         self.facebook_id = self.data['id']
         self.connect_success(request, *args, **kwargs)
@@ -148,9 +149,8 @@ def signup(request):
         try:
             User.objects.get(username=request.POST.get("desired_username"))
             messages.error(request,"Sorry, that username is taken. If that's you, connect again after traditional login")
-
         except User.DoesNotExist:
-            callback_url = urllib.urlencode(reverse("facebook_claim_username",args=[request.POST.get("desired_username")]))
+            callback_url = urlencode(reverse("facebook_claim_username",args=[request.POST.get("desired_username")]))
             return redirect(reverse("facebook_connect"))
 
     return redirect("/accounts/register/")
