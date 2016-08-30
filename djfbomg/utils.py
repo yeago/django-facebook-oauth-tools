@@ -1,4 +1,5 @@
 import urllib2
+from urllib import urlencode
 import json
 import logging
 
@@ -40,12 +41,12 @@ def graph_api(*args, **kwargs):
 
     if post_data is not None:
         params.update(post_data)
-        params = urllib2.urlencode(params)
+        params = urlencode(params)
         log.info(url)
         req = urllib2.urlopen(url, params, timeout=5)
         
     else: 
-        params = urllib2.urlencode(params)
+        params = urlencode(params)
         url = '%s?%s' % (url,params)
         log.debug(url)
         req = urllib2.urlopen(url, timeout=5)
