@@ -1,7 +1,7 @@
 import logging
 import json
 import urllib2
-from urllib import urlencode
+from urllib import urlencode, quote_plus, unquote_plus
 
 from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
@@ -40,7 +40,7 @@ def connect(request):
             scope = request.GET['extra_scope']
 
     redirect_uri = "http://%s%s" % (Site.objects.get_current().domain,\
-        urllib.quote_plus(reverse("facebook_auth_callback")))
+        quote_plus(reverse("facebook_auth_callback")))
 
     kwargs = {
         'type': 'client_cred',
@@ -62,13 +62,13 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
         self.fail_url = None
     
         if request.session.get("FACEBOOK_ABANDON_URL"):
-            self.abandon_url = urllib.unquote_plus(request.session.get("FACEBOOK_ABANDON_URL"))
+            self.abandon_url = unquote_plus(request.session.get("FACEBOOK_ABANDON_URL"))
 
         if request.session.get("FACEBOOK_SUCCESS_URL"):
-            self.success_url = urllib.unquote_plus(request.session.get("FACEBOOK_SUCCESS_URL"))
+            self.success_url = unquote_plus(request.session.get("FACEBOOK_SUCCESS_URL"))
 
         if request.session.get("FACEBOOK_FAIL_URL"):
-            self.fail_url = urllib.unquote_plus(request.session.get("FACEBOOK_FAIL_URL"))
+            self.fail_url = unquote_plus(request.session.get("FACEBOOK_FAIL_URL"))
 
         self.return_url = self.success_url or self.abandon_url or self.return_url
 
