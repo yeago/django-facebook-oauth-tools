@@ -1,4 +1,4 @@
-import urllib
+import urllib2
 import json
 import logging
 
@@ -40,15 +40,15 @@ def graph_api(*args, **kwargs):
 
     if post_data is not None:
         params.update(post_data)
-        params = urllib.urlencode(params)
+        params = urllib2.urlencode(params)
         log.info(url)
-        req = urllib.urlopen(url,params)
+        req = urllib2.urlopen(url,params)
         
     else: 
-        params = urllib.urlencode(params)
+        params = urllib2.urlencode(params)
         url = '%s?%s' % (url,params)
         log.debug(url)
-        req = urllib.urlopen(url)
+        req = urllib2.urlopen(url)
 
     if not as_json:
         return req
