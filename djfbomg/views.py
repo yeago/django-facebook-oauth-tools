@@ -1,3 +1,4 @@
+import requests
 import logging
 import json
 import urllib2
@@ -72,31 +73,30 @@ class auth_callback(RedirectView): # This is where FB redirects you after auth.
 
         self.return_url = self.success_url or self.abandon_url or self.return_url
 
-        if not request.GET.get("code"): # Why are they here without a code var?
+        if not request.GET.get("code"):  # Why are they here without a code var?
             return redirect(self.return_url)
 
         params = {
             'client_id': settings.FACEBOOK_APP_ID,
-            'redirect_uri': "http://%s%s" % (Site.objects.get_current(),reverse("facebook_auth_callback")),
+            'redirect_uri': "http://%s%s" % (Site.objects.get_current(), reverse("facebook_auth_callback")),
             'client_secret': settings.FACEBOOK_APP_SECRET,
             'code': request.GET.get("code"),
         }
 
-        params = urlencode(params)
-        req = urllib2.urlopen("%s%s" % (GRAPH_URL, params), timeout=5)
-        body = req.read()
+        req = requests.get(GRAPH_URL, params=params, timeout=5)
+        body = req.json()
 
         if "error" in body:
             log.debug("FB Authentication error: %s" % body)
-            messages.error(request,"Some problem authenticating you. Maybe try again?")
+            messages.error(request, "Some problem authenticating you. Maybe try again?")
             self.return_url = self.fail_url or self.return_url
             return redirect(self.return_url)
 
         self.response = body
-        self.token = body.split("&")[0].replace("access_token=","")
+        self.token = body.split("&")[0].replace("access_token=", "")
 
-        req = urllib2.urlopen("https://graph.facebook.com/me/?format=json&access_token=%s" % (self.token), timeout=5)
-        self.data = json.loads(req.read())
+        req = requests.get("https://graph.facebook.com/me/?format=json&access_token=%s" % (self.token), timeout=5)
+        self.data = req.json()
         self.facebook_id = self.data['id']
         self.connect_success(request, *args, **kwargs)
         attrs = self.success_url, self.return_url
