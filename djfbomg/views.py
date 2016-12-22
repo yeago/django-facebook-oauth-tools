@@ -101,7 +101,7 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
         self.data = req.json()
         self.facebook_id = self.data['id']
         self.connect_success(request, *args, **kwargs)
-        attrs = self.success_url, self.return_url
+        attrs = self.success_url, self.return_url, self.abandon_url
         return redirect(self.success_url or self.return_url)
 
     def connect_success(self, request, *args, **kwargs):
@@ -122,9 +122,9 @@ def solicit(request, permslug, fail=False):
     profile = request.user.userprofile
 
     if not hasattr(profile, profile_field):
-        raise Http404 # Profile needs to have the field for this to be useful
+        raise Http404  # Profile needs to have the field for this to be useful
 
-    setattr(profile, profile_field, fail == False)
+    setattr(profile, profile_field, fail is False)
     profile.save()
     return redirect(request.GET.get('return_url') or '/')
 
