@@ -73,7 +73,7 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
         if request.session.get("FACEBOOK_FAIL_URL"):
             self.fail_url = unquote_plus(request.session.get("FACEBOOK_FAIL_URL"))
 
-        self.return_url = self.success_url or self.abandon_url or self.return_url
+        self.return_url = self.success_url or self.return_url
 
         if not request.GET.get("code"):  # Why are they here without a code var?
             return redirect(self.return_url)
