@@ -105,7 +105,7 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
         return redirect(self.success_url or self.return_url)
 
     def connect_success(self, request, *args, **kwargs):
-        raise Exception("Override this")
+        raise NotImplementedError("Override this")
 
 
 def solicit(request, permslug, fail=False):
