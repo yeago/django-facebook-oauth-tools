@@ -4,7 +4,7 @@ from urllib import urlencode, quote_plus, unquote_plus
 
 from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, NoReverseMatch
 from django.http import Http404
 from django.conf import settings
 
@@ -107,7 +107,10 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
         self.facebook_id = self.data['id']
         self.connect_success(request, *args, **kwargs)
         attrs = self.success_url, self.return_url, self.abandon_url  # NOQA
-        return redirect(self.success_url or self.return_url)
+        try:
+            return redirect(self.success_url or self.return_url)
+        except NoReverseMatch:
+            return redirect("/")
 
     def connect_success(self, request, *args, **kwargs):
         raise NotImplementedError("Override this")
