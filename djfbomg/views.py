@@ -39,7 +39,7 @@ def connect(request):
         else:
             scope = request.GET['extra_scope']
 
-    redirect_uri = "http://%s%s" % (
+    redirect_uri = "https://%s%s" % (
         Site.objects.get_current().domain,
         quote_plus(reverse("facebook_auth_callback")))
 
@@ -106,7 +106,6 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
         self.data = req.json()
         self.facebook_id = self.data['id']
         self.connect_success(request, *args, **kwargs)
-        attrs = self.success_url, self.return_url, self.abandon_url  # NOQA
         try:
             return redirect(self.success_url or self.return_url)
         except NoReverseMatch:
