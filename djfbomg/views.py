@@ -83,7 +83,7 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
 
         params = {
             'client_id': settings.FACEBOOK_APP_ID,
-            'redirect_uri': "http://%s%s" % (Site.objects.get_current(), reverse("facebook_auth_callback")),
+            'redirect_uri': "https://%s%s" % (Site.objects.get_current(), reverse("facebook_auth_callback")),
             'client_secret': settings.FACEBOOK_APP_SECRET,
             'code': request.GET.get("code"),
         }
