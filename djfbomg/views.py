@@ -89,7 +89,7 @@ class auth_callback(RedirectView):  # This is where FB redirects you after auth.
         }
 
         req = requests.get(GRAPH_URL, params=params, timeout=5)
-        if "error" in req.contet:
+        if "error" in req.content:
             log.debug("FB Authentication error: %s" % req.content)
             messages.error(request, "Some problem authenticating you. Maybe try again?")
             self.return_url = self.fail_url or self.return_url
