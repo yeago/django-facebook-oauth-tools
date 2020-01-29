@@ -1,6 +1,9 @@
 import requests
 import logging
-from urllib.parse import urlencode, quote_plus, unquote_plus
+try:
+    from urllib.parse import urlencode, quote_plus, unquote_plus
+except ImportError:
+    from urllib import urlencode, quote_plus, unquote_plus
 
 from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
