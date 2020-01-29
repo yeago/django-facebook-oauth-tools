@@ -1,10 +1,10 @@
 import requests
 import logging
-from urllib import urlencode, quote_plus, unquote_plus
+from urllib.parse import urlencode, quote_plus, unquote_plus
 
 from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
-from django.core.urlresolvers import reverse, NoReverseMatch
+from django.urls import reverse, NoReverseMatch
 from django.http import Http404
 from django.conf import settings
 
